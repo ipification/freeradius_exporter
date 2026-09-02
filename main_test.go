@@ -68,12 +68,12 @@ func TestParseAllowedIPs(t *testing.T) {
 		{
 			name:  "valid single IP",
 			input: "192.168.1.10",
-			expected: []*net.IPNet{
-				{
-					IP:   net.ParseIP("192.168.1.10"),
-					Mask: net.CIDRMask(32, 32),
-				},
-			},
+			expected: func() []*net.IPNet {
+				_, ip, _ := net.ParseCIDR("192.168.1.10/32")
+				return []*net.IPNet{
+					ip,
+				}
+			}(),
 			wantErr: false,
 		},
 		{
@@ -89,13 +89,54 @@ func TestParseAllowedIPs(t *testing.T) {
 			name:  "valid mix IP and CIDR",
 			input: "192.168.1.1,10.0.0.0/24",
 			expected: func() []*net.IPNet {
+				_, ip, _ := net.ParseCIDR("192.168.1.1/32")
 				_, cidr, _ := net.ParseCIDR("10.0.0.0/24")
 				return []*net.IPNet{
-					{
-						IP:   net.ParseIP("192.168.1.1"),
-						Mask: net.CIDRMask(32, 32),
-					},
+					ip,
 					cidr,
+				}
+			}(),
+			wantErr: false,
+		},
+		{
+			name:  "valid ipv6",
+			input: "2001:db8::1",
+			expected: func() []*net.IPNet {
+				return []*net.IPNet{
+					{
+						IP:   net.ParseIP("2001:db8::1"),
+						Mask: net.CIDRMask(128, 128),
+					},
+				}
+			}(),
+			wantErr: false,
+		},
+		{
+			name:  "valid mix ipv6 IP and CIDR",
+			input: "2001:db8::1,2001:db9::/56",
+			expected: func() []*net.IPNet {
+				_, ip, _ := net.ParseCIDR("2001:db8::1/128")
+				_, cidr, _ := net.ParseCIDR("2001:db9::/56")
+				return []*net.IPNet{
+					ip,
+					cidr,
+				}
+			}(),
+			wantErr: false,
+		},
+		{
+			name:  "valid mix ipv6 IP and CIDR",
+			input: "2001:db8::1,2001:db9::/56,192.168.1.1,10.0.0.0/24",
+			expected: func() []*net.IPNet {
+				_, ip6, _ := net.ParseCIDR("2001:db8::1/128")
+				_, cidr6, _ := net.ParseCIDR("2001:db9::/56")
+				_, ip4, _ := net.ParseCIDR("192.168.1.1/32")
+				_, cidr4, _ := net.ParseCIDR("10.0.0.0/24")
+				return []*net.IPNet{
+					ip6,
+					cidr6,
+					ip4,
+					cidr4,
 				}
 			}(),
 			wantErr: false,
