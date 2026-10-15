@@ -82,7 +82,7 @@ func main() {
 	})
 
 	srv := &http.Server{}
-	listener, err := net.Listen("tcp4", *listenAddr)
+	listener, err := net.Listen("tcp", *listenAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +90,6 @@ func main() {
 	log.Printf("Providing metrics at %s%s", *listenAddr, *metricsPath)
 	log.Fatal(srv.Serve(listener))
 }
-
 
 func parseAllowedIPs(input string) ([]*net.IPNet, error) {
 	if input == "" {
@@ -101,10 +100,18 @@ func parseAllowedIPs(input string) ([]*net.IPNet, error) {
 	for _, entry := range entries {
 		entry = strings.TrimSpace(entry)
 		if ip := net.ParseIP(entry); ip != nil {
-			result = append(result, &net.IPNet{
-				IP:   ip,
-				Mask: net.CIDRMask(32, 32),
-			})
+			if ip.To4() != nil {
+				result = append(result, &net.IPNet{
+					IP:   ip.To4(),
+					Mask: net.CIDRMask(32, 32),
+				})
+			} else {
+				result = append(result, &net.IPNet{
+					IP:   ip.To16(),
+					Mask: net.CIDRMask(128, 128),
+				})
+			}
+
 			continue
 		}
 		if _, cidr, err := net.ParseCIDR(entry); err == nil {
